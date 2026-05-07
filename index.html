@@ -345,6 +345,7 @@
       <button class="tab active" onclick="switchTab('workers')">근무자 관리</button>
       <button class="tab" onclick="switchTab('schedule')">스케줄 관리</button>
       <button class="tab" onclick="switchTab('qrcode')">QR코드 생성</button>
+      <button class="tab" onclick="switchTab('settings')">설정</button>
     </div>
 
     <!-- Workers Tab -->
@@ -409,6 +410,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="tab-settings">
+      <div style="background: #f9fafb; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
+        <h3 style="margin-bottom: 10px;">관리자 비밀번호 변경</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 10px;">
+          기본 비밀번호(1234) 대신 새로운 비밀번호를 설정할 수 있습니다.
+        </p>
+        <div class="form-group">
+          <input type="password" id="newAdminPassword" class="form-control" placeholder="새로운 비밀번호 입력">
+        </div>
+        <button class="btn-primary" onclick="changePassword()">비밀번호 변경</button>
+      </div>
+    </div>
   </div>
 
   <!-- Firebase Scripts -->
@@ -448,13 +463,17 @@
       const todayStr = `${yyyy}-${mm}-${dd}`;
       const hour = now.getHours();
 
+      const todaySchedule = schedules[todayStr];
+      if (!todaySchedule) return null;
+
+      if (todaySchedule['full']) {
+        return workers[todaySchedule['full']];
+      }
+
       let shift = 'morning';
       if (hour >= 13) {
         shift = 'afternoon';
       }
-
-      const todaySchedule = schedules[todayStr];
-      if (!todaySchedule) return null;
 
       const workerId = todaySchedule[shift];
       if (!workerId) return null;
@@ -524,12 +543,21 @@
       renderPublicView();
     });
 
+    let adminPassword = "1234";
+    const settingsRef = ref(db, 'settings');
+    onValue(settingsRef, (snapshot) => {
+      const settings = snapshot.val();
+      if (settings && settings.admin_password) {
+        adminPassword = settings.admin_password;
+      }
+    });
+
     updateDateDisplay();
 
     // --- Admin Logic ---
     window.promptAdmin = () => {
       const pwd = prompt("관리자 비밀번호를 입력하세요 (기본: 1234)");
-      if (pwd === "1234" || pwd === "admin") {
+      if (pwd === adminPassword || pwd === "admin") {
         document.getElementById('publicView').style.display = 'none';
         document.getElementById('adminView').style.display = 'block';
         
@@ -544,6 +572,19 @@
       document.getElementById('publicView').style.display = 'flex';
       document.getElementById('adminView').style.display = 'none';
       document.body.style.alignItems = 'center';
+    };
+
+    window.changePassword = () => {
+      const newPwd = document.getElementById("newAdminPassword").value.trim();
+      if (!newPwd) {
+        alert("새 비밀번호를 입력해주세요.");
+        return;
+      }
+      set(ref(db, 'settings/admin_password'), newPwd).then(() => {
+        alert("비밀번호가 변경되었습니다.");
+        document.getElementById("newAdminPassword").value = "";
+        adminPassword = newPwd;
+      });
     };
 
     window.switchTab = (tabId) => {
@@ -598,7 +639,7 @@
     }
 
     window.updateScheduleInline = (dateStr, shift, workerId) => {
-      const schedule = schedules[dateStr] || { morning: '', afternoon: '' };
+      const schedule = schedules[dateStr] || { full: '', morning: '', afternoon: '' };
       schedule[shift] = workerId;
       set(ref(db, `schedules/${dateStr}`), schedule).catch(err => alert("저장 실패: " + err.message));
     };
@@ -615,11 +656,18 @@
         return html;
       };
 
-      // 오늘부터 +13일 표시
+      // 오늘부터 근무일 기준 +14일 표시 (일요일 제외)
       const today = new Date();
-      for (let i = 0; i < 14; i++) {
+      let addedDays = 0;
+      let dOffset = 0;
+      
+      while (addedDays < 14) {
         const d = new Date(today);
-        d.setDate(d.getDate() + i);
+        d.setDate(d.getDate() + dOffset);
+        dOffset++;
+        
+        if (d.getDay() === 0) continue; // 일요일 제외
+        addedDays++;
         
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -627,24 +675,33 @@
         const dateStr = `${yyyy}-${mm}-${dd}`;
         
         const schedule = schedules[dateStr] || {};
+        const fSelected = schedule.full || '';
         const mSelected = schedule.morning || '';
         const aSelected = schedule.afternoon || '';
 
         const displayDate = `${mm}월 ${dd}일`;
         const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-        const isToday = i === 0;
+        const isToday = dOffset === 1;
 
         grid.innerHTML += `
           <div class="schedule-card" ${isToday ? 'style="border-color: var(--primary-color); border-width: 2px;"' : ''}>
             <h3 ${isToday ? 'style="color: var(--primary-color);"' : ''}>${displayDate} (${dayOfWeek})${isToday ? ' - 오늘' : ''}</h3>
             <div class="schedule-slot">
-              <label>오전 (00~13시)</label>
+              <label style="color: var(--primary-color); font-weight: 600;">▶ 종일 근무 (00~24시)</label>
+              <select class="form-control" style="padding: 8px; font-size: 0.9rem; border-color: var(--primary-color);" onchange="updateScheduleInline('${dateStr}', 'full', this.value)">
+                ${buildOptions(fSelected)}
+              </select>
+            </div>
+            <div style="border-top: 1px dashed #ccc; margin: 10px 0;"></div>
+            <p style="font-size: 0.75rem; color: #888; margin-bottom: 5px;">* 종일 근무자가 지정되면 아래 오전/오후 설정은 무시됩니다.</p>
+            <div class="schedule-slot">
+              <label>오전 근무 (00~13시)</label>
               <select class="form-control" style="padding: 8px; font-size: 0.9rem;" onchange="updateScheduleInline('${dateStr}', 'morning', this.value)">
                 ${buildOptions(mSelected)}
               </select>
             </div>
             <div class="schedule-slot">
-              <label>오후 (13~24시)</label>
+              <label>오후 근무 (13~24시)</label>
               <select class="form-control" style="padding: 8px; font-size: 0.9rem;" onchange="updateScheduleInline('${dateStr}', 'afternoon', this.value)">
                 ${buildOptions(aSelected)}
               </select>
