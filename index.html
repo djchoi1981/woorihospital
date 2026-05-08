@@ -425,6 +425,32 @@
             <option value="rect-contain">직사각형 전신 전체 (잘림 없이 배경과 조화)</option>
           </select>
         </div>
+        <div class="form-group" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <label style="margin-bottom: 15px; font-weight: bold;">사진 크기 및 위치 상세 조정</label>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
+                <span>확대/축소 비율</span>
+                <span id="scaleVal" style="font-weight: bold; color: var(--primary-color);">1.0x</span>
+              </div>
+              <input type="range" id="workerPhotoScale" min="0.5" max="3" step="0.1" value="1" style="width: 100%;" oninput="document.getElementById('scaleVal').textContent=Number(this.value).toFixed(1)+'x'">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
+                <span>좌우 위치 (가로)</span>
+                <span id="posXVal" style="font-weight: bold; color: var(--primary-color);">50%</span>
+              </div>
+              <input type="range" id="workerPhotoPosX" min="0" max="100" step="1" value="50" style="width: 100%;" oninput="document.getElementById('posXVal').textContent=this.value+'%'">
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
+                <span>상하 위치 (세로)</span>
+                <span id="posYVal" style="font-weight: bold; color: var(--primary-color);">50%</span>
+              </div>
+              <input type="range" id="workerPhotoPosY" min="0" max="100" step="1" value="50" style="width: 100%;" oninput="document.getElementById('posYVal').textContent=this.value+'%'">
+            </div>
+          </div>
+        </div>
         <div style="display: flex; gap: 10px;">
           <button id="submitWorkerBtn" class="btn-primary" onclick="submitWorker()">추가하기</button>
           <button id="cancelEditBtn" class="btn" style="background: #e5e7eb; color: #374151; display: none; width: auto; padding: 12px 20px;" onclick="cancelEdit()">취소</button>
@@ -586,12 +612,21 @@
       let avatarHtml = `<div class="worker-avatar">${worker.name.charAt(0)}</div>`;
       if (worker.photo) {
         const pFit = worker.photoFit || 'cover';
+        const pScale = worker.photoScale || '1';
+        const pPosX = worker.photoPosX || '50';
+        const pPosY = worker.photoPosY || '50';
+        
+        const cssFit = pFit === 'rect-contain' ? 'contain' : 'cover';
+        const styleStr = `object-fit: ${cssFit}; object-position: ${pPosX}% ${pPosY}%; transform: scale(${pScale}); transform-origin: center;`;
+        
         if (pFit === 'cover') {
-          avatarHtml = `<img src="${worker.photo}" class="worker-avatar" style="object-fit: cover;">`;
-        } else if (pFit === 'rect-contain') {
-          avatarHtml = `<img src="${worker.photo}" class="worker-avatar-img" style="object-fit: contain;">`;
-        } else if (pFit === 'rect-cover') {
-          avatarHtml = `<img src="${worker.photo}" class="worker-avatar-img" style="object-fit: cover;">`;
+          avatarHtml = `<div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto 15px;">
+            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}">
+          </div>`;
+        } else {
+          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; border-radius: 12px; overflow: hidden; margin: 0 auto 15px; background: transparent;">
+            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}">
+          </div>`;
         }
       }
 
@@ -729,9 +764,13 @@
         photoBase64 = workers[editingWorkerId].photo;
       }
 
+      const photoScale = document.getElementById('workerPhotoScale').value;
+      const photoPosX = document.getElementById('workerPhotoPosX').value;
+      const photoPosY = document.getElementById('workerPhotoPosY').value;
+
       if (editingWorkerId) {
         set(ref(db, `workers/${editingWorkerId}`), {
-          name, phone, kakao, photo: photoBase64, photoFit
+          name, phone, kakao, photo: photoBase64, photoFit, photoScale, photoPosX, photoPosY
         }).then(() => {
           alert("수정되었습니다.");
           window.cancelEdit();
@@ -739,13 +778,19 @@
       } else {
         const newWorkerRef = push(ref(db, 'workers'));
         set(newWorkerRef, {
-          name, phone, kakao, photo: photoBase64, photoFit
+          name, phone, kakao, photo: photoBase64, photoFit, photoScale, photoPosX, photoPosY
         }).then(() => {
           document.getElementById('workerName').value = '';
           document.getElementById('workerPhone').value = '';
           document.getElementById('workerKakao').value = '';
           if (fileInput) fileInput.value = '';
           document.getElementById('workerPhotoFit').value = 'cover';
+          document.getElementById('workerPhotoScale').value = '1';
+          document.getElementById('workerPhotoPosX').value = '50';
+          document.getElementById('workerPhotoPosY').value = '50';
+          document.getElementById('scaleVal').textContent = '1.0x';
+          document.getElementById('posXVal').textContent = '50%';
+          document.getElementById('posYVal').textContent = '50%';
           alert("추가되었습니다.");
         });
       }
@@ -766,6 +811,13 @@
       document.getElementById('workerPhoto').value = '';
       document.getElementById('workerPhotoFit').value = worker.photoFit || 'cover';
       
+      document.getElementById('workerPhotoScale').value = worker.photoScale || '1';
+      document.getElementById('workerPhotoPosX').value = worker.photoPosX || '50';
+      document.getElementById('workerPhotoPosY').value = worker.photoPosY || '50';
+      document.getElementById('scaleVal').textContent = Number(worker.photoScale || 1).toFixed(1) + 'x';
+      document.getElementById('posXVal').textContent = (worker.photoPosX || 50) + '%';
+      document.getElementById('posYVal').textContent = (worker.photoPosY || 50) + '%';
+      
       document.getElementById('tab-workers').scrollIntoView({ behavior: 'smooth' });
     };
 
@@ -780,6 +832,13 @@
       document.getElementById('workerKakao').value = '';
       document.getElementById('workerPhoto').value = '';
       document.getElementById('workerPhotoFit').value = 'cover';
+      
+      document.getElementById('workerPhotoScale').value = '1';
+      document.getElementById('workerPhotoPosX').value = '50';
+      document.getElementById('workerPhotoPosY').value = '50';
+      document.getElementById('scaleVal').textContent = '1.0x';
+      document.getElementById('posXVal').textContent = '50%';
+      document.getElementById('posYVal').textContent = '50%';
     };
 
     window.deleteWorker = (id) => {
