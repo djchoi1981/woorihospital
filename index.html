@@ -391,11 +391,15 @@
 
     <!-- Schedule Tab -->
     <div class="tab-content" id="tab-schedule">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3>향후 60일 스케줄 (약 2개월)</h3>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">자동 저장됩니다.</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+        <button class="btn" style="width: auto; padding: 8px 15px; border: 1px solid var(--border-color); background: white;" onclick="changeMonth(-1)">◀</button>
+        <h3 id="calendarMonthLabel" style="margin: 0; font-size: 1.2rem;">2026년 5월</h3>
+        <button class="btn" style="width: auto; padding: 8px 15px; border: 1px solid var(--border-color); background: white;" onclick="changeMonth(1)">▶</button>
       </div>
-      <div class="schedule-grid" id="scheduleGrid">
+      <div style="text-align: right; margin-bottom: 10px;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">변경 시 자동 저장됩니다.</span>
+      </div>
+      <div class="calendar-grid" id="scheduleGrid">
       </div>
     </div>
 
@@ -751,71 +755,100 @@
       set(ref(db, `schedules/${dateStr}`), schedule).catch(err => alert("저장 실패: " + err.message));
     };
 
+    let currentMonthDate = new Date();
+    currentMonthDate.setDate(1);
+
+    window.changeMonth = (offset) => {
+      currentMonthDate.setMonth(currentMonthDate.getMonth() + offset);
+      renderScheduleGrid();
+    };
+
     function renderScheduleGrid() {
       const grid = document.getElementById('scheduleGrid');
-      grid.innerHTML = '';
-
-      const buildOptions = (selectedId) => {
-        let html = `<option value="" ${!selectedId ? 'selected' : ''}>-- 선택 안함 --</option>`;
+      if (!grid) return;
+      const monthLabel = document.getElementById('calendarMonthLabel');
+      
+      const yyyy = currentMonthDate.getFullYear();
+      const mm = currentMonthDate.getMonth();
+      
+      monthLabel.textContent = `\${yyyy}년 \${mm + 1}월`;
+      
+      let htmlStr = `
+        <div class="cal-day-header" style="color:#EF4444;">일</div>
+        <div class="cal-day-header">월</div>
+        <div class="cal-day-header">화</div>
+        <div class="cal-day-header">수</div>
+        <div class="cal-day-header">목</div>
+        <div class="cal-day-header">금</div>
+        <div class="cal-day-header" style="color:#3B82F6;">토</div>
+      `;
+      
+      const firstDay = new Date(yyyy, mm, 1);
+      const lastDay = new Date(yyyy, mm + 1, 0);
+      
+      const startOffset = firstDay.getDay();
+      const totalDays = lastDay.getDate();
+      
+      for (let i = 0; i < startOffset; i++) {
+        htmlStr += `<div class="cal-cell disabled"></div>`;
+      }
+      
+      const today = new Date();
+      const todayStr = `\${today.getFullYear()}-\${String(today.getMonth()+1).padStart(2,'0')}-\${String(today.getDate()).padStart(2,'0')}`;
+      
+      const buildOptions = (selectedId, defaultLabel) => {
+        let html = `<option value="" \${!selectedId ? 'selected' : ''}>\${defaultLabel}</option>`;
         for (const [id, worker] of Object.entries(workers)) {
-          html += `<option value="${id}" ${selectedId === id ? 'selected' : ''}>${worker.name}</option>`;
+          html += `<option value="\${id}" \${selectedId === id ? 'selected' : ''}>\${worker.name}</option>`;
         }
         return html;
       };
 
-      // 오늘부터 근무일 기준 +60일 표시 (일요일 제외, 약 2개월)
-      const today = new Date();
-      let addedDays = 0;
-      let dOffset = 0;
-      
-      while (addedDays < 60) {
-        const d = new Date(today);
-        d.setDate(d.getDate() + dOffset);
-        dOffset++;
+      for (let d = 1; d <= totalDays; d++) {
+        const curDate = new Date(yyyy, mm, d);
+        const dayOfWeek = curDate.getDay();
+        const dateStr = `\${yyyy}-\${String(mm+1).padStart(2,'0')}-\${String(d).padStart(2,'0')}`;
+        const isToday = dateStr === todayStr;
+        const isSunday = dayOfWeek === 0;
         
-        if (d.getDay() === 0) continue; // 일요일 제외
-        addedDays++;
+        let cellClass = "cal-cell";
+        if (isSunday) cellClass += " sunday";
+        if (isToday) cellClass += " today";
         
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const dateStr = `${yyyy}-${mm}-${dd}`;
+        let dateStyle = "";
+        if (isSunday) dateStyle = "color: #EF4444;";
+        else if (dayOfWeek === 6) dateStyle = "color: #3B82F6;";
         
-        const schedule = schedules[dateStr] || {};
-        const fSelected = schedule.full || '';
-        const mSelected = schedule.morning || '';
-        const aSelected = schedule.afternoon || '';
-
-        const displayDate = `${mm}월 ${dd}일`;
-        const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-        const isToday = dOffset === 1;
-
-        grid.innerHTML += `
-          <div class="schedule-card" ${isToday ? 'style="border-color: var(--primary-color); border-width: 2px;"' : ''}>
-            <h3 ${isToday ? 'style="color: var(--primary-color);"' : ''}>${displayDate} (${dayOfWeek})${isToday ? ' - 오늘' : ''}</h3>
-            <div class="schedule-slot">
-              <label style="color: var(--primary-color); font-weight: 600;">▶ 종일 근무 (00~24시)</label>
-              <select class="form-control" style="padding: 8px; font-size: 0.9rem; border-color: var(--primary-color);" onchange="updateScheduleInline('${dateStr}', 'full', this.value)">
-                ${buildOptions(fSelected)}
-              </select>
-            </div>
-            <div style="border-top: 1px dashed #ccc; margin: 10px 0;"></div>
-            <p style="font-size: 0.75rem; color: #888; margin-bottom: 5px;">* 종일 담당자가 지정되면 아래 오전/오후 설정은 무시됩니다.</p>
-            <div class="schedule-slot">
-              <label>오전 근무 (00~13시)</label>
-              <select class="form-control" style="padding: 8px; font-size: 0.9rem;" onchange="updateScheduleInline('${dateStr}', 'morning', this.value)">
-                ${buildOptions(mSelected)}
-              </select>
-            </div>
-            <div class="schedule-slot">
-              <label>오후 근무 (13~24시)</label>
-              <select class="form-control" style="padding: 8px; font-size: 0.9rem;" onchange="updateScheduleInline('${dateStr}', 'afternoon', this.value)">
-                ${buildOptions(aSelected)}
-              </select>
-            </div>
+        let contentHtml = "";
+        if (isSunday) {
+          contentHtml = `<div style="text-align:center; color:#EF4444; font-size:0.8rem; margin-top:10px; font-weight:600;">휴무</div>`;
+        } else {
+          const schedule = schedules[dateStr] || {};
+          const fSelected = schedule.full || '';
+          const mSelected = schedule.morning || '';
+          const aSelected = schedule.afternoon || '';
+          
+          contentHtml = `
+            <select class="cal-select f-sel" onchange="updateScheduleInline('\${dateStr}', 'full', this.value)">
+              \${buildOptions(fSelected, '▶종일')}
+            </select>
+            <select class="cal-select" onchange="updateScheduleInline('\${dateStr}', 'morning', this.value)">
+              \${buildOptions(mSelected, '오전')}
+            </select>
+            <select class="cal-select" onchange="updateScheduleInline('\${dateStr}', 'afternoon', this.value)">
+              \${buildOptions(aSelected, '오후')}
+            </select>
+          `;
+        }
+        
+        htmlStr += `
+          <div class="\${cellClass}">
+            <div class="cal-date" style="\${dateStyle}">\${d}</div>
+            \${contentHtml}
           </div>
         `;
       }
+      grid.innerHTML = htmlStr;
     }
 
     let qrcodeInstance = null;
