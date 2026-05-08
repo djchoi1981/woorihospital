@@ -633,37 +633,53 @@
         const pPosX = worker.photoPosX || '50';
         const pPosY = worker.photoPosY || '50';
         
-        if (!window.adjustPublicAvatarScale) {
-            window.adjustPublicAvatarScale = (img, fit, userScale) => {
-                const box = img.parentElement;
-                if (!img.naturalWidth) return;
-                const imgRatio = img.naturalWidth / img.naturalHeight;
-                const boxRatio = box.clientWidth / box.clientHeight;
-                let baseScale = 1;
-                if (fit === 'cover' || fit === 'rect-cover') {
+        if (!window.adjustAvatarScale) {
+            window.adjustAvatarScale = (imgObj, fitMode, userScale, pX, pY) => {
+                const pBox = imgObj.parentElement;
+                if (!imgObj.naturalWidth) return;
+                const imgRatio = imgObj.naturalWidth / imgObj.naturalHeight;
+                const boxRatio = pBox.clientWidth / pBox.clientHeight;
+                let baseW = 100, baseH = 100;
+                
+                if (fitMode === 'cover' || fitMode === 'rect-cover') {
                     if (imgRatio > boxRatio) {
-                        baseScale = imgRatio / boxRatio;
+                        baseW = 100 * (imgRatio / boxRatio);
                     } else {
-                        baseScale = boxRatio / imgRatio;
+                        baseH = 100 * (boxRatio / imgRatio);
+                    }
+                } else {
+                    if (imgRatio > boxRatio) {
+                        baseH = 100 * (boxRatio / imgRatio);
+                    } else {
+                        baseW = 100 * (imgRatio / boxRatio);
                     }
                 }
-                img.style.transform = `scale(${userScale * baseScale})`;
-                img.style.opacity = '1';
+                
+                const finalW = baseW * userScale;
+                const finalH = baseH * userScale;
+                
+                imgObj.style.position = 'absolute';
+                imgObj.style.width = `${finalW}%`;
+                imgObj.style.height = `${finalH}%`;
+                imgObj.style.left = `${pX}%`;
+                imgObj.style.top = `${pY}%`;
+                imgObj.style.transform = `translate(-${pX}%, -${pY}%)`;
+                imgObj.style.opacity = '1';
+                imgObj.style.objectFit = 'fill';
             };
         }
 
-        const styleStr = `object-fit: contain; object-position: ${pPosX}% ${pPosY}%; opacity: 0; transition: opacity 0.2s;`;
-        const onloadStr = `onload="adjustPublicAvatarScale(this, '${pFit}', ${pScale})"`;
+        const onloadStr = `onload="if(window.adjustAvatarScale) window.adjustAvatarScale(this, '${pFit}', ${pScale}, ${pPosX}, ${pPosY})"`;
         
         if (pFit === 'cover') {
-          const maskStyle = `-webkit-mask-image: radial-gradient(circle, black 70%, transparent 100%); mask-image: radial-gradient(circle, black 70%, transparent 100%);`;
-          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; ${maskStyle}">
-            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}" ${onloadStr}>
+          const maskStyle = `-webkit-mask-image: radial-gradient(circle closest-side, black 75%, transparent 100%); mask-image: radial-gradient(circle closest-side, black 75%, transparent 100%);`;
+          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; position: relative; ${maskStyle}">
+            <img src="${worker.photo}" style="opacity: 0; transition: opacity 0.2s;" ${onloadStr}>
           </div>`;
         } else {
-          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%);`;
-          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; ${maskStyle}">
-            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}" ${onloadStr}>
+          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse closest-side at center, black 75%, transparent 100%); mask-image: radial-gradient(ellipse closest-side at center, black 75%, transparent 100%);`;
+          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; position: relative; ${maskStyle}">
+            <img src="${worker.photo}" style="opacity: 0; transition: opacity 0.2s;" ${onloadStr}>
           </div>`;
         }
       }
@@ -873,8 +889,8 @@
         box.style.borderRadius = '50%';
         box.style.width = '100px';
         box.style.height = '100px';
-        box.style.WebkitMaskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
-        box.style.maskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        box.style.WebkitMaskImage = 'radial-gradient(circle closest-side, black 75%, transparent 100%)';
+        box.style.maskImage = 'radial-gradient(circle closest-side, black 75%, transparent 100%)';
         img.style.WebkitMaskImage = 'none';
         img.style.maskImage = 'none';
         img.style.borderRadius = '0';
@@ -882,8 +898,8 @@
         box.style.borderRadius = '8px';
         box.style.width = '100px';
         box.style.height = '140px';
-        box.style.WebkitMaskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
-        box.style.maskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        box.style.WebkitMaskImage = 'radial-gradient(ellipse closest-side at center, black 75%, transparent 100%)';
+        box.style.maskImage = 'radial-gradient(ellipse closest-side at center, black 75%, transparent 100%)';
         img.style.WebkitMaskImage = 'none';
         img.style.maskImage = 'none';
         img.style.borderRadius = '0';
