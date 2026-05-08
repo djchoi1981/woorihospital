@@ -771,7 +771,7 @@
       const yyyy = currentMonthDate.getFullYear();
       const mm = currentMonthDate.getMonth();
       
-      monthLabel.textContent = `\${yyyy}년 \${mm + 1}월`;
+      monthLabel.textContent = `${yyyy}년 ${mm + 1}월`;
       
       let htmlStr = `
         <div class="cal-day-header" style="color:#EF4444;">일</div>
@@ -794,12 +794,12 @@
       }
       
       const today = new Date();
-      const todayStr = `\${today.getFullYear()}-\${String(today.getMonth()+1).padStart(2,'0')}-\${String(today.getDate()).padStart(2,'0')}`;
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
       
       const buildOptions = (selectedId, defaultLabel) => {
-        let html = `<option value="" \${!selectedId ? 'selected' : ''}>\${defaultLabel}</option>`;
+        let html = `<option value="" ${!selectedId ? 'selected' : ''}>${defaultLabel}</option>`;
         for (const [id, worker] of Object.entries(workers)) {
-          html += `<option value="\${id}" \${selectedId === id ? 'selected' : ''}>\${worker.name}</option>`;
+          html += `<option value="${id}" ${selectedId === id ? 'selected' : ''}>${worker.name}</option>`;
         }
         return html;
       };
@@ -807,7 +807,7 @@
       for (let d = 1; d <= totalDays; d++) {
         const curDate = new Date(yyyy, mm, d);
         const dayOfWeek = curDate.getDay();
-        const dateStr = `\${yyyy}-\${String(mm+1).padStart(2,'0')}-\${String(d).padStart(2,'0')}`;
+        const dateStr = `${yyyy}-${String(mm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const isToday = dateStr === todayStr;
         const isSunday = dayOfWeek === 0;
         
@@ -829,22 +829,22 @@
           const aSelected = schedule.afternoon || '';
           
           contentHtml = `
-            <select class="cal-select f-sel" onchange="updateScheduleInline('\${dateStr}', 'full', this.value)">
-              \${buildOptions(fSelected, '▶종일')}
+            <select class="cal-select f-sel" onchange="updateScheduleInline('${dateStr}', 'full', this.value)">
+              ${buildOptions(fSelected, '▶종일')}
             </select>
-            <select class="cal-select" onchange="updateScheduleInline('\${dateStr}', 'morning', this.value)">
-              \${buildOptions(mSelected, '오전')}
+            <select class="cal-select" onchange="updateScheduleInline('${dateStr}', 'morning', this.value)">
+              ${buildOptions(mSelected, '오전')}
             </select>
-            <select class="cal-select" onchange="updateScheduleInline('\${dateStr}', 'afternoon', this.value)">
-              \${buildOptions(aSelected, '오후')}
+            <select class="cal-select" onchange="updateScheduleInline('${dateStr}', 'afternoon', this.value)">
+              ${buildOptions(aSelected, '오후')}
             </select>
           `;
         }
         
         htmlStr += `
-          <div class="\${cellClass}">
-            <div class="cal-date" style="\${dateStyle}">\${d}</div>
-            \${contentHtml}
+          <div class="${cellClass}">
+            <div class="cal-date" style="${dateStyle}">${d}</div>
+            ${contentHtml}
           </div>
         `;
       }
