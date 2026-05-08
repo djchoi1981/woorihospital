@@ -637,11 +637,13 @@
         const styleStr = `object-fit: ${cssFit}; object-position: ${pPosX}% ${pPosY}%; transform: scale(${pScale}); transform-origin: center;`;
         
         if (pFit === 'cover') {
-          avatarHtml = `<div style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; margin: 0 auto 15px;">
+          const maskStyle = `-webkit-mask-image: radial-gradient(circle, black 70%, transparent 100%); mask-image: radial-gradient(circle, black 70%, transparent 100%);`;
+          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; ${maskStyle}">
             <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}">
           </div>`;
         } else {
-          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; border-radius: 12px; overflow: hidden; margin: 0 auto 15px; background: transparent;">
+          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%);`;
+          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; ${maskStyle}">
             <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}">
           </div>`;
         }
@@ -808,10 +810,14 @@
         box.style.borderRadius = '50%';
         box.style.width = '100px';
         box.style.height = '100px';
+        box.style.WebkitMaskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        box.style.maskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
       } else {
         box.style.borderRadius = '8px';
         box.style.width = '100px';
         box.style.height = '140px';
+        box.style.WebkitMaskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        box.style.maskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
       }
     };
 
