@@ -637,14 +637,14 @@
         const styleStr = `object-fit: ${cssFit}; object-position: ${pPosX}% ${pPosY}%; transform: scale(${pScale}); transform-origin: center;`;
         
         if (pFit === 'cover') {
-          const maskStyle = `-webkit-mask-image: radial-gradient(circle, black 70%, transparent 100%); mask-image: radial-gradient(circle, black 70%, transparent 100%);`;
-          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; ${maskStyle}">
-            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}">
+          const maskStyle = `-webkit-mask-image: radial-gradient(circle, black 70%, transparent 100%); mask-image: radial-gradient(circle, black 70%, transparent 100%); border-radius: 50%;`;
+          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr} ${maskStyle}">
           </div>`;
         } else {
-          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%);`;
-          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; ${maskStyle}">
-            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}">
+          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); border-radius: 8px;`;
+          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center;">
+            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr} ${maskStyle}">
           </div>`;
         }
       }
@@ -810,14 +810,20 @@
         box.style.borderRadius = '50%';
         box.style.width = '100px';
         box.style.height = '100px';
-        box.style.WebkitMaskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
-        box.style.maskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        box.style.WebkitMaskImage = 'none';
+        box.style.maskImage = 'none';
+        img.style.WebkitMaskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        img.style.maskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        img.style.borderRadius = '50%';
       } else {
         box.style.borderRadius = '8px';
         box.style.width = '100px';
         box.style.height = '140px';
-        box.style.WebkitMaskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
-        box.style.maskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        box.style.WebkitMaskImage = 'none';
+        box.style.maskImage = 'none';
+        img.style.WebkitMaskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        img.style.maskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        img.style.borderRadius = '8px';
       }
     };
 
