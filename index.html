@@ -158,7 +158,7 @@
 
     .admin-link {
       position: absolute;
-      bottom: 20px;
+      top: 20px;
       right: 20px;
       color: #9ca3af;
       cursor: pointer;
@@ -425,40 +425,46 @@
         </div>
         <div class="form-group">
           <label>프로필 사진 (선택)</label>
-          <input type="file" id="workerPhoto" class="form-control" accept="image/*">
+          <input type="file" id="workerPhoto" class="form-control" accept="image/*" onchange="handlePhotoUpload(this)">
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">* 수정 시 새로운 사진을 선택하지 않으면 기존 사진이 유지됩니다.</p>
         </div>
         <div class="form-group">
           <label>사진 표시 형태 (범위/비율 설정)</label>
-          <select id="workerPhotoFit" class="form-control">
+          <select id="workerPhotoFit" class="form-control" onchange="updatePhotoPreview()">
             <option value="cover">원형 (얼굴 위주)</option>
             <option value="rect-cover">직사각형 꽉 차게 (전신 일부 잘림)</option>
             <option value="rect-contain">직사각형 전신 전체 (잘림 없이 배경과 조화)</option>
           </select>
         </div>
         <div class="form-group" style="background: white; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-          <label style="margin-bottom: 15px; font-weight: bold;">사진 크기 및 위치 상세 조정</label>
-          <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
-                <span>확대/축소 비율</span>
-                <span id="scaleVal" style="font-weight: bold; color: var(--primary-color);">1.0x</span>
-              </div>
-              <input type="range" id="workerPhotoScale" min="0.5" max="3" step="0.1" value="1" style="width: 100%;" oninput="document.getElementById('scaleVal').textContent=Number(this.value).toFixed(1)+'x'">
+          <label style="margin-bottom: 15px; font-weight: bold; display: block;">사진 크기 및 위치 상세 조정</label>
+          <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+            <div id="photoPreviewBox" style="width: 100px; height: 100px; border-radius: 50%; overflow: hidden; background: #f3f4f6; border: 2px dashed #d1d5db; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative;">
+              <span id="photoPreviewPlaceholder" style="font-size: 0.7rem; color: #9ca3af; text-align: center;">미리보기<br>(사진없음)</span>
+              <img id="photoPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; transform: scale(1); transform-origin: center; display: none; position: absolute; top: 0; left: 0;">
             </div>
-            <div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
-                <span>좌우 위치 (가로)</span>
-                <span id="posXVal" style="font-weight: bold; color: var(--primary-color);">50%</span>
+            <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px; min-width: 200px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
+                  <span>확대/축소 비율</span>
+                  <span id="scaleVal" style="font-weight: bold; color: var(--primary-color);">1.0x</span>
+                </div>
+                <input type="range" id="workerPhotoScale" min="0.5" max="3" step="0.1" value="1" style="width: 100%;" oninput="document.getElementById('scaleVal').textContent=Number(this.value).toFixed(1)+'x'; updatePhotoPreview();">
               </div>
-              <input type="range" id="workerPhotoPosX" min="0" max="100" step="1" value="50" style="width: 100%;" oninput="document.getElementById('posXVal').textContent=this.value+'%'">
-            </div>
-            <div>
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
-                <span>상하 위치 (세로)</span>
-                <span id="posYVal" style="font-weight: bold; color: var(--primary-color);">50%</span>
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
+                  <span>좌우 위치 (가로)</span>
+                  <span id="posXVal" style="font-weight: bold; color: var(--primary-color);">50%</span>
+                </div>
+                <input type="range" id="workerPhotoPosX" min="0" max="100" step="1" value="50" style="width: 100%;" oninput="document.getElementById('posXVal').textContent=this.value+'%'; updatePhotoPreview();">
               </div>
-              <input type="range" id="workerPhotoPosY" min="0" max="100" step="1" value="50" style="width: 100%;" oninput="document.getElementById('posYVal').textContent=this.value+'%'">
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">
+                  <span>상하 위치 (세로)</span>
+                  <span id="posYVal" style="font-weight: bold; color: var(--primary-color);">50%</span>
+                </div>
+                <input type="range" id="workerPhotoPosY" min="0" max="100" step="1" value="50" style="width: 100%;" oninput="document.getElementById('posYVal').textContent=this.value+'%'; updatePhotoPreview();">
+              </div>
             </div>
           </div>
         </div>
@@ -755,6 +761,59 @@
     };
 
     let editingWorkerId = null;
+    let currentPreviewSrc = '';
+
+    window.handlePhotoUpload = (input) => {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          currentPreviewSrc = e.target.result;
+          updatePhotoPreview();
+        }
+        reader.readAsDataURL(input.files[0]);
+      } else {
+        currentPreviewSrc = '';
+        updatePhotoPreview();
+      }
+    };
+    
+    window.updatePhotoPreview = () => {
+      const box = document.getElementById('photoPreviewBox');
+      const img = document.getElementById('photoPreviewImg');
+      const placeholder = document.getElementById('photoPreviewPlaceholder');
+      
+      const fit = document.getElementById('workerPhotoFit').value;
+      const scale = document.getElementById('workerPhotoScale').value;
+      const posX = document.getElementById('workerPhotoPosX').value;
+      const posY = document.getElementById('workerPhotoPosY').value;
+      
+      if (!currentPreviewSrc && editingWorkerId && workers[editingWorkerId] && workers[editingWorkerId].photo) {
+        currentPreviewSrc = workers[editingWorkerId].photo;
+      }
+      
+      if (currentPreviewSrc) {
+        img.src = currentPreviewSrc;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+        
+        img.style.objectFit = fit === 'rect-contain' ? 'contain' : 'cover';
+        img.style.objectPosition = `${posX}% ${posY}%`;
+        img.style.transform = `scale(${scale})`;
+      } else {
+        img.style.display = 'none';
+        placeholder.style.display = 'block';
+      }
+      
+      if (fit === 'cover') {
+        box.style.borderRadius = '50%';
+        box.style.width = '100px';
+        box.style.height = '100px';
+      } else {
+        box.style.borderRadius = '8px';
+        box.style.width = '100px';
+        box.style.height = '140px';
+      }
+    };
 
     window.submitWorker = async () => {
       const name = document.getElementById('workerName').value.trim();
@@ -803,6 +862,8 @@
           document.getElementById('posXVal').textContent = '50%';
           document.getElementById('posYVal').textContent = '50%';
           alert("추가되었습니다.");
+          currentPreviewSrc = '';
+          updatePhotoPreview();
         });
       }
     };
@@ -812,6 +873,8 @@
       if (!worker) return;
       
       editingWorkerId = id;
+      currentPreviewSrc = ''; // clear first
+      
       document.getElementById('formTitle').textContent = "컨설턴트 정보 수정";
       document.getElementById('submitWorkerBtn').textContent = "수정하기";
       document.getElementById('cancelEditBtn').style.display = "block";
@@ -829,11 +892,14 @@
       document.getElementById('posXVal').textContent = (worker.photoPosX || 50) + '%';
       document.getElementById('posYVal').textContent = (worker.photoPosY || 50) + '%';
       
+      updatePhotoPreview();
       document.getElementById('tab-workers').scrollIntoView({ behavior: 'smooth' });
     };
 
     window.cancelEdit = () => {
       editingWorkerId = null;
+      currentPreviewSrc = '';
+      
       document.getElementById('formTitle').textContent = "새 컨설턴트 추가";
       document.getElementById('submitWorkerBtn').textContent = "추가하기";
       document.getElementById('cancelEditBtn').style.display = "none";
@@ -850,6 +916,8 @@
       document.getElementById('scaleVal').textContent = '1.0x';
       document.getElementById('posXVal').textContent = '50%';
       document.getElementById('posYVal').textContent = '50%';
+      
+      updatePhotoPreview();
     };
 
     window.deleteWorker = (id) => {
