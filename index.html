@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>우리병원 근무자 연락처</title>
+  <title>우리병원 컨설턴트 연락처</title>
   <style>
     :root {
       --primary-color: #4F46E5;
@@ -325,7 +325,7 @@
   <!-- Public View -->
   <div class="container" id="publicView">
     <div class="header">
-      <h1>오늘의 담당 근무자</h1>
+      <h1>오늘의 담당 컨설턴트</h1>
       <p id="currentDateDisplay"></p>
     </div>
     <div class="content" id="publicContent">
@@ -342,7 +342,7 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" onclick="switchTab('workers')">근무자 관리</button>
+      <button class="tab active" onclick="switchTab('workers')">컨설턴트 관리</button>
       <button class="tab" onclick="switchTab('schedule')">스케줄 관리</button>
       <button class="tab" onclick="switchTab('qrcode')">QR코드 생성</button>
       <button class="tab" onclick="switchTab('settings')">설정</button>
@@ -351,7 +351,7 @@
     <!-- Workers Tab -->
     <div class="tab-content active" id="tab-workers">
       <div style="background: #f9fafb; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
-        <h3 style="margin-bottom: 15px;">새 근무자 추가</h3>
+        <h3 style="margin-bottom: 15px;">새 컨설턴트 추가</h3>
         <div class="form-group">
           <label>이름</label>
           <input type="text" id="workerName" class="form-control" placeholder="홍길동">
@@ -364,10 +364,14 @@
           <label>카카오톡 오픈채팅/채널 링크 (선택)</label>
           <input type="url" id="workerKakao" class="form-control" placeholder="https://open.kakao.com/o/...">
         </div>
+        <div class="form-group">
+          <label>프로필 사진 (선택)</label>
+          <input type="file" id="workerPhoto" class="form-control" accept="image/*">
+        </div>
         <button class="btn-primary" onclick="addWorker()">추가하기</button>
       </div>
 
-      <h3>등록된 근무자</h3>
+      <h3>등록된 컨설턴트</h3>
       <table>
         <thead>
           <tr>
@@ -384,7 +388,7 @@
     <!-- Schedule Tab -->
     <div class="tab-content" id="tab-schedule">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3>향후 14일 스케줄 (직접 선택)</h3>
+        <h3>향후 60일 스케줄 (약 2개월)</h3>
         <span style="font-size: 0.85rem; color: var(--text-muted);">자동 저장됩니다.</span>
       </div>
       <div class="schedule-grid" id="scheduleGrid">
@@ -489,8 +493,8 @@
         content.innerHTML = `
           <div class="worker-card">
             <div class="worker-avatar" style="background: #FEE2E2; color: #EF4444;">✕</div>
-            <div class="worker-name">근무자 없음</div>
-            <div class="worker-role">현재 시간대에 등록된 근무자가 없습니다.</div>
+            <div class="worker-name">컨설턴트 없음</div>
+            <div class="worker-role">현재 시간대에 등록된 컨설턴트가 없습니다.</div>
           </div>
         `;
         return;
@@ -515,11 +519,16 @@
         `;
       }
 
+      let avatarHtml = `<div class="worker-avatar">${worker.name.charAt(0)}</div>`;
+      if (worker.photo) {
+        avatarHtml = `<img src="${worker.photo}" class="worker-avatar" style="object-fit: cover;">`;
+      }
+
       content.innerHTML = `
         <div class="worker-card">
-          <div class="worker-avatar">${worker.name.charAt(0)}</div>
+          ${avatarHtml}
           <div class="worker-name">${worker.name}</div>
-          <div class="worker-role">담당 근무자</div>
+          <div class="worker-role">담당 컨설턴트</div>
         </div>
         <div class="action-buttons">
           ${buttonsHtml}
@@ -595,23 +604,63 @@
       document.getElementById(`tab-${tabId}`).classList.add('active');
     };
 
-    window.addWorker = () => {
+    window.compressImage = (file) => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 200;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    window.addWorker = async () => {
       const name = document.getElementById('workerName').value.trim();
       const phone = document.getElementById('workerPhone').value.trim();
       const kakao = document.getElementById('workerKakao').value.trim();
+      const fileInput = document.getElementById('workerPhoto');
 
       if (!name || !phone) {
         alert("이름과 전화번호는 필수입니다.");
         return;
       }
+      
+      let photoBase64 = "";
+      if (fileInput && fileInput.files && fileInput.files[0]) {
+        photoBase64 = await compressImage(fileInput.files[0]);
+      }
 
       const newWorkerRef = push(ref(db, 'workers'));
       set(newWorkerRef, {
-        name, phone, kakao
+        name, phone, kakao, photo: photoBase64
       }).then(() => {
         document.getElementById('workerName').value = '';
         document.getElementById('workerPhone').value = '';
         document.getElementById('workerKakao').value = '';
+        if (fileInput) fileInput.value = '';
         alert("추가되었습니다.");
       });
     };
@@ -626,9 +675,18 @@
       const tbody = document.getElementById('workerTableBody');
       tbody.innerHTML = '';
       for (const [id, worker] of Object.entries(workers)) {
+        const avatarHtml = worker.photo 
+          ? `<img src="${worker.photo}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">` 
+          : `<div style="width:30px;height:30px;border-radius:50%;background:#E0E7FF;display:flex;align-items:center;justify-content:center;color:var(--primary-color);font-weight:bold;">${worker.name.charAt(0)}</div>`;
+          
         tbody.innerHTML += `
           <tr>
-            <td>${worker.name}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                ${avatarHtml}
+                ${worker.name}
+              </div>
+            </td>
             <td>${worker.phone}</td>
             <td>
               <button class="btn-danger" onclick="deleteWorker('${id}')">삭제</button>
@@ -656,12 +714,12 @@
         return html;
       };
 
-      // 오늘부터 근무일 기준 +14일 표시 (일요일 제외)
+      // 오늘부터 근무일 기준 +60일 표시 (일요일 제외, 약 2개월)
       const today = new Date();
       let addedDays = 0;
       let dOffset = 0;
       
-      while (addedDays < 14) {
+      while (addedDays < 60) {
         const d = new Date(today);
         d.setDate(d.getDate() + dOffset);
         dOffset++;
@@ -693,7 +751,7 @@
               </select>
             </div>
             <div style="border-top: 1px dashed #ccc; margin: 10px 0;"></div>
-            <p style="font-size: 0.75rem; color: #888; margin-bottom: 5px;">* 종일 근무자가 지정되면 아래 오전/오후 설정은 무시됩니다.</p>
+            <p style="font-size: 0.75rem; color: #888; margin-bottom: 5px;">* 종일 담당자가 지정되면 아래 오전/오후 설정은 무시됩니다.</p>
             <div class="schedule-slot">
               <label>오전 근무 (00~13시)</label>
               <select class="form-control" style="padding: 8px; font-size: 0.9rem;" onchange="updateScheduleInline('${dateStr}', 'morning', this.value)">
