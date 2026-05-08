@@ -351,7 +351,7 @@
     <!-- Workers Tab -->
     <div class="tab-content active" id="tab-workers">
       <div style="background: #f9fafb; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-color);">
-        <h3 style="margin-bottom: 15px;">새 컨설턴트 추가</h3>
+        <h3 id="formTitle" style="margin-bottom: 15px;">새 컨설턴트 추가</h3>
         <div class="form-group">
           <label>이름</label>
           <input type="text" id="workerName" class="form-control" placeholder="홍길동">
@@ -367,8 +367,12 @@
         <div class="form-group">
           <label>프로필 사진 (선택)</label>
           <input type="file" id="workerPhoto" class="form-control" accept="image/*">
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">* 수정 시 새로운 사진을 선택하지 않으면 기존 사진이 유지됩니다.</p>
         </div>
-        <button class="btn-primary" onclick="addWorker()">추가하기</button>
+        <div style="display: flex; gap: 10px;">
+          <button id="submitWorkerBtn" class="btn-primary" onclick="submitWorker()">추가하기</button>
+          <button id="cancelEditBtn" class="btn" style="background: #e5e7eb; color: #374151; display: none; width: auto; padding: 12px 20px;" onclick="cancelEdit()">취소</button>
+        </div>
       </div>
 
       <h3>등록된 컨설턴트</h3>
@@ -637,7 +641,9 @@
       });
     };
 
-    window.addWorker = async () => {
+    let editingWorkerId = null;
+
+    window.submitWorker = async () => {
       const name = document.getElementById('workerName').value.trim();
       const phone = document.getElementById('workerPhone').value.trim();
       const kakao = document.getElementById('workerKakao').value.trim();
@@ -651,18 +657,58 @@
       let photoBase64 = "";
       if (fileInput && fileInput.files && fileInput.files[0]) {
         photoBase64 = await compressImage(fileInput.files[0]);
+      } else if (editingWorkerId && workers[editingWorkerId].photo) {
+        photoBase64 = workers[editingWorkerId].photo;
       }
 
-      const newWorkerRef = push(ref(db, 'workers'));
-      set(newWorkerRef, {
-        name, phone, kakao, photo: photoBase64
-      }).then(() => {
-        document.getElementById('workerName').value = '';
-        document.getElementById('workerPhone').value = '';
-        document.getElementById('workerKakao').value = '';
-        if (fileInput) fileInput.value = '';
-        alert("추가되었습니다.");
-      });
+      if (editingWorkerId) {
+        set(ref(db, `workers/\${editingWorkerId}`), {
+          name, phone, kakao, photo: photoBase64
+        }).then(() => {
+          alert("수정되었습니다.");
+          window.cancelEdit();
+        });
+      } else {
+        const newWorkerRef = push(ref(db, 'workers'));
+        set(newWorkerRef, {
+          name, phone, kakao, photo: photoBase64
+        }).then(() => {
+          document.getElementById('workerName').value = '';
+          document.getElementById('workerPhone').value = '';
+          document.getElementById('workerKakao').value = '';
+          if (fileInput) fileInput.value = '';
+          alert("추가되었습니다.");
+        });
+      }
+    };
+
+    window.editWorker = (id) => {
+      const worker = workers[id];
+      if (!worker) return;
+      
+      editingWorkerId = id;
+      document.getElementById('formTitle').textContent = "컨설턴트 정보 수정";
+      document.getElementById('submitWorkerBtn').textContent = "수정하기";
+      document.getElementById('cancelEditBtn').style.display = "block";
+      
+      document.getElementById('workerName').value = worker.name;
+      document.getElementById('workerPhone').value = worker.phone;
+      document.getElementById('workerKakao').value = worker.kakao || '';
+      document.getElementById('workerPhoto').value = '';
+      
+      document.getElementById('tab-workers').scrollIntoView({ behavior: 'smooth' });
+    };
+
+    window.cancelEdit = () => {
+      editingWorkerId = null;
+      document.getElementById('formTitle').textContent = "새 컨설턴트 추가";
+      document.getElementById('submitWorkerBtn').textContent = "추가하기";
+      document.getElementById('cancelEditBtn').style.display = "none";
+      
+      document.getElementById('workerName').value = '';
+      document.getElementById('workerPhone').value = '';
+      document.getElementById('workerKakao').value = '';
+      document.getElementById('workerPhoto').value = '';
     };
 
     window.deleteWorker = (id) => {
@@ -689,7 +735,10 @@
             </td>
             <td>${worker.phone}</td>
             <td>
-              <button class="btn-danger" onclick="deleteWorker('${id}')">삭제</button>
+              <div style="display: flex; gap: 5px;">
+                <button class="btn-primary" style="padding: 6px 10px; font-size: 0.85rem; width: auto;" onclick="editWorker('${id}')">수정</button>
+                <button class="btn-danger" style="padding: 6px 10px; font-size: 0.85rem;" onclick="deleteWorker('${id}')">삭제</button>
+              </div>
             </td>
           </tr>
         `;
