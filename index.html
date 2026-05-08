@@ -819,23 +819,44 @@
         box.style.border = 'none';
         box.style.background = 'transparent';
         
-        img.style.objectFit = 'contain';
-        img.style.objectPosition = `${posX}% ${posY}%`;
-        
-        let baseScale = 1;
-        if (img.src && img.complete && img.naturalWidth) {
-           const imgRatio = img.naturalWidth / img.naturalHeight;
-           const boxRatio = box.clientWidth / box.clientHeight;
-           if (fit === 'cover' || fit === 'rect-cover') {
-              if (imgRatio > boxRatio) {
-                  baseScale = imgRatio / boxRatio;
-              } else {
-                  baseScale = boxRatio / imgRatio;
-              }
-           }
+        if (!window.adjustAvatarScale) {
+            window.adjustAvatarScale = (imgObj, fitMode, userScale, pX, pY) => {
+                const pBox = imgObj.parentElement;
+                if (!imgObj.naturalWidth) return;
+                const imgRatio = imgObj.naturalWidth / imgObj.naturalHeight;
+                const boxRatio = pBox.clientWidth / pBox.clientHeight;
+                let baseW = 100, baseH = 100;
+                
+                if (fitMode === 'cover' || fitMode === 'rect-cover') {
+                    if (imgRatio > boxRatio) {
+                        baseW = 100 * (imgRatio / boxRatio);
+                    } else {
+                        baseH = 100 * (boxRatio / imgRatio);
+                    }
+                } else {
+                    if (imgRatio > boxRatio) {
+                        baseH = 100 * (boxRatio / imgRatio);
+                    } else {
+                        baseW = 100 * (imgRatio / boxRatio);
+                    }
+                }
+                
+                const finalW = baseW * userScale;
+                const finalH = baseH * userScale;
+                
+                imgObj.style.position = 'absolute';
+                imgObj.style.width = `${finalW}%`;
+                imgObj.style.height = `${finalH}%`;
+                imgObj.style.left = `${pX}%`;
+                imgObj.style.top = `${pY}%`;
+                imgObj.style.transform = `translate(-${pX}%, -${pY}%)`;
+                imgObj.style.opacity = '1';
+                imgObj.style.objectFit = 'fill';
+            };
         }
         
-        img.style.transform = `scale(${scale * baseScale})`;
+        img.style.opacity = '1';
+        window.adjustAvatarScale(img, fit, scale, posX, posY);
         
         if (!img.onloadSet) {
            img.onloadSet = true;
