@@ -633,18 +633,37 @@
         const pPosX = worker.photoPosX || '50';
         const pPosY = worker.photoPosY || '50';
         
-        const cssFit = pFit === 'rect-contain' ? 'contain' : 'cover';
-        const styleStr = `object-fit: ${cssFit}; object-position: ${pPosX}% ${pPosY}%; transform: scale(${pScale}); transform-origin: center;`;
+        if (!window.adjustPublicAvatarScale) {
+            window.adjustPublicAvatarScale = (img, fit, userScale) => {
+                const box = img.parentElement;
+                if (!img.naturalWidth) return;
+                const imgRatio = img.naturalWidth / img.naturalHeight;
+                const boxRatio = box.clientWidth / box.clientHeight;
+                let baseScale = 1;
+                if (fit === 'cover' || fit === 'rect-cover') {
+                    if (imgRatio > boxRatio) {
+                        baseScale = imgRatio / boxRatio;
+                    } else {
+                        baseScale = boxRatio / imgRatio;
+                    }
+                }
+                img.style.transform = `scale(${userScale * baseScale})`;
+                img.style.opacity = '1';
+            };
+        }
+
+        const styleStr = `object-fit: contain; object-position: ${pPosX}% ${pPosY}%; opacity: 0; transition: opacity 0.2s;`;
+        const onloadStr = `onload="adjustPublicAvatarScale(this, '${pFit}', ${pScale})"`;
         
         if (pFit === 'cover') {
-          const maskStyle = `-webkit-mask-image: radial-gradient(circle, black 70%, transparent 100%); mask-image: radial-gradient(circle, black 70%, transparent 100%); border-radius: 50%;`;
-          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr} ${maskStyle}">
+          const maskStyle = `-webkit-mask-image: radial-gradient(circle, black 70%, transparent 100%); mask-image: radial-gradient(circle, black 70%, transparent 100%);`;
+          avatarHtml = `<div style="width: 150px; height: 150px; margin: 0 auto 15px; overflow: hidden; border-radius: 50%; display: flex; align-items: center; justify-content: center; ${maskStyle}">
+            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}" ${onloadStr}>
           </div>`;
         } else {
-          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); border-radius: 8px;`;
-          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center;">
-            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr} ${maskStyle}">
+          const maskStyle = `-webkit-mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%); mask-image: radial-gradient(ellipse at center, black 70%, transparent 100%);`;
+          avatarHtml = `<div style="width: 100%; max-width: 250px; height: 350px; margin: 0 auto 15px; overflow: hidden; background: transparent; display: flex; align-items: center; justify-content: center; ${maskStyle}">
+            <img src="${worker.photo}" style="width: 100%; height: 100%; ${styleStr}" ${onloadStr}>
           </div>`;
         }
       }
@@ -797,33 +816,56 @@
         img.src = currentPreviewSrc;
         img.style.display = 'block';
         placeholder.style.display = 'none';
+        box.style.border = 'none';
+        box.style.background = 'transparent';
         
-        img.style.objectFit = fit === 'rect-contain' ? 'contain' : 'cover';
+        img.style.objectFit = 'contain';
         img.style.objectPosition = `${posX}% ${posY}%`;
-        img.style.transform = `scale(${scale})`;
+        
+        let baseScale = 1;
+        if (img.src && img.complete && img.naturalWidth) {
+           const imgRatio = img.naturalWidth / img.naturalHeight;
+           const boxRatio = box.clientWidth / box.clientHeight;
+           if (fit === 'cover' || fit === 'rect-cover') {
+              if (imgRatio > boxRatio) {
+                  baseScale = imgRatio / boxRatio;
+              } else {
+                  baseScale = boxRatio / imgRatio;
+              }
+           }
+        }
+        
+        img.style.transform = `scale(${scale * baseScale})`;
+        
+        if (!img.onloadSet) {
+           img.onloadSet = true;
+           img.addEventListener('load', updatePhotoPreview);
+        }
       } else {
         img.style.display = 'none';
         placeholder.style.display = 'block';
+        box.style.border = '2px dashed #d1d5db';
+        box.style.background = '#f3f4f6';
       }
       
       if (fit === 'cover') {
         box.style.borderRadius = '50%';
         box.style.width = '100px';
         box.style.height = '100px';
-        box.style.WebkitMaskImage = 'none';
-        box.style.maskImage = 'none';
-        img.style.WebkitMaskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
-        img.style.maskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
-        img.style.borderRadius = '50%';
+        box.style.WebkitMaskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        box.style.maskImage = 'radial-gradient(circle, black 70%, transparent 100%)';
+        img.style.WebkitMaskImage = 'none';
+        img.style.maskImage = 'none';
+        img.style.borderRadius = '0';
       } else {
         box.style.borderRadius = '8px';
         box.style.width = '100px';
         box.style.height = '140px';
-        box.style.WebkitMaskImage = 'none';
-        box.style.maskImage = 'none';
-        img.style.WebkitMaskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
-        img.style.maskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
-        img.style.borderRadius = '8px';
+        box.style.WebkitMaskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        box.style.maskImage = 'radial-gradient(ellipse at center, black 70%, transparent 100%)';
+        img.style.WebkitMaskImage = 'none';
+        img.style.maskImage = 'none';
+        img.style.borderRadius = '0';
       }
     };
 
